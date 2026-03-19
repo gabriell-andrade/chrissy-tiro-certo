@@ -2,25 +2,25 @@ package com.chrissytirocerto.model;
 
 public class Suggestion {
 
-    private String type;
-    private double probability;
-    private String confidence;
+    private String market;
+    private String pick;
+    private double confidence;
 
-    public Suggestion(String type, double probability, String confidence) {
-        this.type = type;
-        this.probability = probability;
+    public Suggestion(String market, String pick, double confidence) {
+        this.market = market;
+        this.pick = pick;
         this.confidence = confidence;
     }
 
-    public String getType() {
-        return type;
+    public String getMarket() {
+        return market;
     }
 
-    public double getProbability() {
-        return probability;
+    public String getPick() {
+        return pick;
     }
 
-    public String getConfidence() {
+    public double getConfidence() {
         return confidence;
     }
 }

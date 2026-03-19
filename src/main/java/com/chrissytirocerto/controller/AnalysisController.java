@@ -17,12 +17,14 @@ public class AnalysisController {
     }
 
     @GetMapping
-    public MatchAnalysis analyzeMatch() {
+    public MatchAnalysis analyzeMatch(
+            @RequestParam int teamA,
+            @RequestParam int teamB
+    ) {
 
-        // 🔥 DADOS MOCKADOS (simulação)
-        MatchStats teamA = new MatchStats("Time A", 1.8, 0.8);
-        MatchStats teamB = new MatchStats("Time B", 1.6, 0.7);
+        MatchStats statsA = new MatchStats("Time A", 0, 0, 0);
+        MatchStats statsB = new MatchStats("Time B", 0, 0, 0);
 
-        return service.analyze(teamA, teamB);
+        return service.analyze(statsA, statsB, teamA, teamB);
     }
 }

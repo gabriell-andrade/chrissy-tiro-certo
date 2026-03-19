@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Chrissy Tiro Certo</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #0f172a, #1e293b);
+            color: white;
+            text-align: center;
+            padding: 40px;
+        }
+
+        h1 {
+            margin-bottom: 30px;
+        }
+
+        input {
+            padding: 12px;
+            margin: 10px;
+            border-radius: 8px;
+            border: none;
+            width: 150px;
+        }
+
+        button {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            background: #22c55e;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #16a34a;
+        }
+
+        .container {
+            margin-top: 30px;
+        }
+
+        .card {
+            background: #1e293b;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 15px auto;
+            width: 300px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.3);
+        }
+
+        .highlight {
+            color: #22c55e;
+            font-weight: bold;
+        }
+
+        .loading {
+            margin-top: 20px;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>⚽ Chrissy Tiro Certo</h1>
+
+<input type="number" id="teamA" placeholder="ID Time A">
+<input type="number" id="teamB" placeholder="ID Time B">
+
+<br>
+
+<button onclick="analyze()">Analisar</button>
+
+<div id="loading" class="loading"></div>
+<div id="result" class="container"></div>
+
+<script>
+    async function analyze() {
+
+        const teamA = document.getElementById("teamA").value;
+        const teamB = document.getElementById("teamB").value;
+
+        const resultDiv = document.getElementById("result");
+        const loadingDiv = document.getElementById("loading");
+
+        resultDiv.innerHTML = "";
+        loadingDiv.innerHTML = "⏳ Analisando...";
+
+        try {
+            const response = await fetch(`http://localhost:8080/analysis?teamA=${teamA}&teamB=${teamB}`);
+            const data = await response.json();
+
+            loadingDiv.innerHTML = "";
+
+            let html = "";
+
+            // TIMES
+            html += `<div class="card">
+                <h2>📊 Times</h2>
+                <p><strong>${data.teamA.teamName}</strong></p>
+                <p>⚽ Gols: <span class="highlight">${data.teamA.averageGoals.toFixed(2)}</span></p>
+                <p>🚩 Escanteios: <span class="highlight">${data.teamA.averageCorners.toFixed(2)}</span></p>
+                <p>🟨 Cartões: <span class="highlight">${data.teamA.averageCards.toFixed(2)}</span></p>
+            </div>`;
+
+            html += `<div class="card">
+                <h2>📊 Times</h2>
+                <p><strong>${data.teamB.teamName}</strong></p>
+                <p>⚽ Gols: <span class="highlight">${data.teamB.averageGoals.toFixed(2)}</span></p>
+                <p>🚩 Escanteios: <span class="highlight">${data.teamB.averageCorners.toFixed(2)}</span></p>
+                <p>🟨 Cartões: <span class="highlight">${data.teamB.averageCards.toFixed(2)}</span></p>
+            </div>`;
+
+            // SUGESTÕES
+            html += `<div class="card">
+                <h2>🎯 Sugestões</h2>`;
+
+            if (data.suggestions.length === 0) {
+                html += `<p>Nenhuma sugestão forte encontrada</p>`;
+            } else {
+                data.suggestions.forEach(s => {
+                    html += `<p>✔ ${s.market} - ${s.pick}
+                    <span class="highlight">(${s.confidence.toFixed(0)}%)</span></p>`;
+                });
+            }
+
+            html += `</div>`;
+
+            resultDiv.innerHTML = html;
+
+        } catch (error) {
+            loadingDiv.innerHTML = "";
+            resultDiv.innerHTML = "<p>❌ Erro ao buscar dados</p>";
+        }
+    }
+</script>
+
+</body>
+</html>
