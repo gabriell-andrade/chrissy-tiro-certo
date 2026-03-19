@@ -13,18 +13,48 @@
             padding: 40px;
         }
 
-        h1 {
-            margin-bottom: 30px;
+        /* FORM */
+        .form {
+            margin-bottom: 20px;
+        }
+
+        /* AUTOCOMPLETE */
+        .autocomplete {
+            position: relative;
+            display: inline-block;
+            margin: 10px;
         }
 
         input {
             padding: 12px;
-            margin: 10px;
             border-radius: 8px;
             border: none;
-            width: 150px;
+            width: 200px;
         }
 
+        .dropdown {
+            position: absolute;
+            background: #1e293b;
+            width: 100%;
+            border-radius: 8px;
+            margin-top: 5px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 10;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+        }
+
+        .dropdown div {
+            padding: 10px;
+            cursor: pointer;
+            text-align: left;
+        }
+
+        .dropdown div:hover {
+            background: #334155;
+        }
+
+        /* BUTTON */
         button {
             padding: 12px 25px;
             border: none;
@@ -35,106 +65,216 @@
             font-weight: bold;
         }
 
-        button:hover {
-            background: #16a34a;
+        button:disabled {
+            background: gray;
         }
 
+        /* CARDS */
         .container {
             margin-top: 30px;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
         }
 
         .card {
             background: #1e293b;
             padding: 20px;
             border-radius: 12px;
-            margin: 15px auto;
-            width: 300px;
-            box-shadow: 0 0 15px rgba(0,0,0,0.3);
+            min-width: 250px;
+            max-width: 350px;
+            flex: 1;
+            transition: 0.2s;
         }
 
-        .highlight {
-            color: #22c55e;
-            font-weight: bold;
+        .card:hover {
+            transform: translateY(-5px);
         }
 
-        .loading {
-            margin-top: 20px;
-            font-size: 18px;
+        .stat {
+            margin: 8px 0;
+        }
+
+        /* BADGES */
+        .badge {
+            padding: 5px 10px;
+            border-radius: 8px;
+            margin-left: 8px;
+            font-size: 12px;
+        }
+
+        .high { background: #16a34a; }
+        .medium { background: #ca8a04; }
+        .low { background: #dc2626; }
+
+        /* LOADER */
+        .loader {
+            border: 4px solid #1e293b;
+            border-top: 4px solid #22c55e;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            margin: 20px auto;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
     </style>
 </head>
+
 <body>
 
 <h1>⚽ Chrissy Tiro Certo</h1>
 
-<input type="number" id="teamA" placeholder="ID Time A">
-<input type="number" id="teamB" placeholder="ID Time B">
+<div class="form">
 
-<br>
+    <!-- TIME A -->
+    <div class="autocomplete">
+        <input type="text" id="teamAInput" placeholder="Time A">
+        <div id="dropdownA" class="dropdown"></div>
+    </div>
 
-<button onclick="analyze()">Analisar</button>
+    <!-- TIME B -->
+    <div class="autocomplete">
+        <input type="text" id="teamBInput" placeholder="Time B">
+        <div id="dropdownB" class="dropdown"></div>
+    </div>
 
-<div id="loading" class="loading"></div>
+    <br><br>
+
+    <button onclick="analyze()" id="btn">Analisar</button>
+
+</div>
+
+<div id="loading"></div>
 <div id="result" class="container"></div>
 
 <script>
-    async function analyze() {
+    let teamAId = null;
+    let teamBId = null;
 
-        const teamA = document.getElementById("teamA").value;
-        const teamB = document.getElementById("teamB").value;
+    /* DEBOUNCE */
+    function debounce(func, delay) {
+        let timeout;
+        return (...args) => {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func(...args), delay);
+        };
+    }
 
-        const resultDiv = document.getElementById("result");
-        const loadingDiv = document.getElementById("loading");
+    /* BUSCA TIMES */
+    async function fetchTeams(query, dropdown, setId, input) {
 
-        resultDiv.innerHTML = "";
-        loadingDiv.innerHTML = "⏳ Analisando...";
+        if (query.length < 2) {
+            dropdown.innerHTML = "";
+            return;
+        }
 
         try {
-            const response = await fetch(`http://localhost:8080/analysis?teamA=${teamA}&teamB=${teamB}`);
-            const data = await response.json();
+            const res = await fetch(`http://localhost:8080/analysis/teams?search=${query}`);
+            const data = await res.json();
 
-            loadingDiv.innerHTML = "";
+            dropdown.innerHTML = "";
+
+            data.forEach(team => {
+                const div = document.createElement("div");
+                div.innerText = team.name;
+
+                div.onclick = () => {
+                    input.value = team.name;
+                    setId(team.id);
+                    dropdown.innerHTML = "";
+                };
+
+                dropdown.appendChild(div);
+            });
+
+        } catch (e) {
+            dropdown.innerHTML = "<div>Erro ao buscar</div>";
+        }
+    }
+
+    /* INPUTS */
+    const teamAInput = document.getElementById("teamAInput");
+    const teamBInput = document.getElementById("teamBInput");
+
+    const dropdownA = document.getElementById("dropdownA");
+    const dropdownB = document.getElementById("dropdownB");
+
+    const debouncedA = debounce((value) => {
+        fetchTeams(value, dropdownA, (id) => teamAId = id, teamAInput);
+    }, 300);
+
+    const debouncedB = debounce((value) => {
+        fetchTeams(value, dropdownB, (id) => teamBId = id, teamBInput);
+    }, 300);
+
+    teamAInput.addEventListener("input", e => debouncedA(e.target.value));
+    teamBInput.addEventListener("input", e => debouncedB(e.target.value));
+
+    /* BADGE */
+    function getConfidenceClass(c) {
+        if (c >= 75) return "high";
+        if (c >= 60) return "medium";
+        return "low";
+    }
+
+    /* ANALYZE */
+    async function analyze() {
+
+        if (!teamAId || !teamBId) {
+            alert("Selecione os dois times!");
+            return;
+        }
+
+        const btn = document.getElementById("btn");
+        const loading = document.getElementById("loading");
+        const result = document.getElementById("result");
+
+        btn.disabled = true;
+        loading.innerHTML = '<div class="loader"></div>';
+        result.innerHTML = "";
+
+        try {
+            const res = await fetch(`http://localhost:8080/analysis?teamA=${teamAId}&teamB=${teamBId}`);
+            const data = await res.json();
 
             let html = "";
 
-            // TIMES
             html += `<div class="card">
-                <h2>📊 Times</h2>
-                <p><strong>${data.teamA.teamName}</strong></p>
-                <p>⚽ Gols: <span class="highlight">${data.teamA.averageGoals.toFixed(2)}</span></p>
-                <p>🚩 Escanteios: <span class="highlight">${data.teamA.averageCorners.toFixed(2)}</span></p>
-                <p>🟨 Cartões: <span class="highlight">${data.teamA.averageCards.toFixed(2)}</span></p>
+                <h2>${data.teamA.teamName}</h2>
+                <p class="stat">⚽ ${data.teamA.averageGoals.toFixed(2)}</p>
             </div>`;
 
             html += `<div class="card">
-                <h2>📊 Times</h2>
-                <p><strong>${data.teamB.teamName}</strong></p>
-                <p>⚽ Gols: <span class="highlight">${data.teamB.averageGoals.toFixed(2)}</span></p>
-                <p>🚩 Escanteios: <span class="highlight">${data.teamB.averageCorners.toFixed(2)}</span></p>
-                <p>🟨 Cartões: <span class="highlight">${data.teamB.averageCards.toFixed(2)}</span></p>
+                <h2>${data.teamB.teamName}</h2>
+                <p class="stat">⚽ ${data.teamB.averageGoals.toFixed(2)}</p>
             </div>`;
 
-            // SUGESTÕES
-            html += `<div class="card">
-                <h2>🎯 Sugestões</h2>`;
+            html += `<div class="card"><h2>🎯 Sugestões</h2>`;
 
-            if (data.suggestions.length === 0) {
-                html += `<p>Nenhuma sugestão forte encontrada</p>`;
-            } else {
-                data.suggestions.forEach(s => {
-                    html += `<p>✔ ${s.market} - ${s.pick}
-                    <span class="highlight">(${s.confidence.toFixed(0)}%)</span></p>`;
-                });
-            }
+            data.suggestions.forEach(s => {
+                html += `<p>
+                    ${s.market} - ${s.pick}
+                    <span class="badge ${getConfidenceClass(s.confidence)}">
+                        ${s.confidence}%
+                    </span>
+                </p>`;
+            });
 
             html += `</div>`;
 
-            resultDiv.innerHTML = html;
+            result.innerHTML = html;
 
-        } catch (error) {
-            loadingDiv.innerHTML = "";
-            resultDiv.innerHTML = "<p>❌ Erro ao buscar dados</p>";
+        } catch (e) {
+            result.innerHTML = "Erro ao analisar";
         }
+
+        loading.innerHTML = "";
+        btn.disabled = false;
     }
 </script>
 
